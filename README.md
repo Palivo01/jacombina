@@ -1,4 +1,4 @@
-# 5º Open do Jacombina • Versão 1.3
+# 5º Open do Jacombina • Versão 2.0
 
 Site estático em HTML, CSS e JavaScript puro. Sem dependências, GA4, Pixel ou outro rastreador. Sem publicação automática.
 
@@ -60,3 +60,25 @@ Title, description, Open Graph e favicon estão presentes. Após escolher o dom�
 ## Verificação
 
 JavaScript conferido sintaticamente. Estrutura HTML, referências a assets, ausência de rastreadores e fluxo do formulário verificados localmente. A prévia visual em navegador não ficou disponível nesta sessão; confira o layout nos seus dispositivos antes de publicar. Google Maps/Waze dependem de conexão. O mapa pode não aparecer ao abrir o HTML local em navegadores com restrições a iframes externos.
+
+## Revisão V1.4
+
+Feminino com dois blocos visíveis e identificados de uniforme, um por atleta, e tamanhos de short e blusa independentes. Apenas o uniforme da parceira ainda não definida é ocultado ao marcar Dupla a escolher. Referências de CSS e JavaScript versionadas para evitar a reutilização de arquivos anteriores pelo cache ao republicar.
+
+## Publicação V1.5: arquivos de código com nomes exclusivos
+
+Diagnóstico observado no site publicado: HTML com as instruções novas de uniforme, mas formulário executado com código antigo (zero seletores de uniforme). A versão local contém os campos. A causa exata pode ser arquivos antigos na publicação ou em cache; o navegador observado carregava script.js sem versão.
+
+Esta entrega usa referências a CSS e JavaScript com assinatura do conteúdo no próprio nome. Assim, a página nova solicita arquivos novos em vez de reutilizar os antigos. Headers pedem revalidação e evitam cache de HTML no CDN quando suportado pela hospedagem.
+
+Para atualizar o site, envie **todo o conteúdo deste ZIP** à mesma raiz, incluindo index.html, pasta assets inteira e _headers. Não atualize apenas index.html, config.js ou script.js. A publicação não foi realizada nesta sessão.
+
+Se editar os arquivos-base em assets/css ou assets/js, execute `python3 preparar-publicacao.py` antes de reenviar todo o pacote. O script gera os arquivos com nomes exclusivos e atualiza as referências do HTML automaticamente.
+
+Depois de publicar, a meta site-version deve ser 2.0. Abra uma janela anônima para conferir. Caso o HTML antigo continue sendo entregue, limpe o cache do domínio no painel da hospedagem/Cloudflare. Isso não é necessário para novos arquivos de código com nomes diferentes.
+
+Na V1.5, todos os CTAs de inscrição (incluindo o botão fixo mobile) apontam diretamente para #registration-form, iniciando na seleção das categorias, em vez de parar no bloco de apresentação/valor. O espaçamento do cabeçalho fixo é respeitado.
+
+## V2.0: campos obrigatórios com asterisco vermelho dinâmico
+
+O asterisco aparece enquanto o campo está vazio ou inválido e desaparece quando válido. A seleção de categorias, nomes, WhatsApp e cada seleção de uniforme são acompanhados. Nomes precisam de pelo menos dois caracteres; nomes iguais da mesma dupla continuam pendentes. WhatsApp precisa passar pela validação com DDD. Se apagar ou invalidar uma resposta, o asterisco volta. Campos do parceiro a escolher e modelo fixo automático não exigem marcação. `required` e `aria-required` permanecem para acessibilidade. As regras de uniforme, mensagem e CTAs diretos ao formulário foram mantidas.

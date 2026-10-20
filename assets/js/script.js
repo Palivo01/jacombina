@@ -7,6 +7,35 @@
   const form = $('registration-form');
   const menu = $('menu');
   const dialog = $('review-dialog');
+  const requiredIndicators = new Map();
+  function isFieldComplete(field) {
+    if (field.disabled || !field.required) return true;
+    if (field.tagName.toLowerCase() === 'select') return Boolean(field.value);
+    const value = field.value.trim().replace(/\s+/g, ' ');
+    if (field.id === 'phone') return /^(?:55)?[1-9][0-9][0-9]{8,9}$/.test(value.replace(/\D/g, ''));
+    if (value.length < 2) return false;
+    const partnerId = field.id.endsWith('-one') ? field.id.replace(/-one$/, '-two') : field.id.endsWith('-two') ? field.id.replace(/-two$/, '-one') : null;
+    const partner = partnerId && $(partnerId);
+    return !partner || partner.disabled || value.toLocaleLowerCase('pt-BR') !== partner.value.trim().replace(/\s+/g,' ').toLocaleLowerCase('pt-BR');
+  }
+  function refreshRequiredIndicators() {
+    for (const {field, marker} of requiredIndicators.values()) marker.hidden = isFieldComplete(field);
+    $('categories-required').hidden = selection.size > 0;
+  }
+  function bindRequired(field, marker) {
+    field.setAttribute('aria-required', String(field.required));
+    requiredIndicators.set(field.id, {field, marker});
+    field.addEventListener('input', refreshRequiredIndicators);
+    field.addEventListener('change', refreshRequiredIndicators);
+    marker.hidden = isFieldComplete(field);
+  }
+  function addRequiredIndicator(label, field) {
+    const marker = document.createElement('span');
+    marker.className = 'required-mark'; marker.textContent = '*'; marker.setAttribute('aria-hidden', 'true');
+    label.append(marker); bindRequired(field, marker);
+  }
+  bindRequired($('responsible'), $('responsible-required'));
+  bindRequired($('phone'), $('phone-required'));
   $('menu-toggle').addEventListener('click', () => {
     const open = menu.classList.toggle('open');
     $('menu-toggle').setAttribute('aria-expanded', String(open));
@@ -41,14 +70,16 @@
     const n = selection.size;
     $('category-count').textContent = n ? `${n} categoria${n === 1 ? '' : 's'} selecionada${n === 1 ? '' : 's'}` : 'Nenhuma categoria selecionada';
     $('teams-fieldset').hidden = n === 0;
+    refreshRequiredIndicators();
   }
   function makeInput(id, title, value, required) {
     const label = document.createElement('label');
-    label.textContent = title;
+    label.textContent = title.replace(/\s*\*$/, '');
     const input = document.createElement('input');
     input.id = id; input.name = id; input.type = 'text'; input.maxLength = 100;
     input.autocomplete = 'off'; input.required = required; input.value = value;
     input.placeholder = 'Nome completo do atleta';
+    addRequiredIndicator(label, input);
     label.append(input);
     return {label, input};
   }
@@ -70,7 +101,9 @@
     if (fixedModel) state.model = rules.models[0][0];
     const group = document.createElement('div');
     group.className = 'uniform-fields';
-    const title = document.createElement('p'); title.className = 'uniform-title'; title.textContent = categoryId === 'kids' && athlete === 'one' ? 'Uniforme do atleta infantil' : 'Uniforme deste atleta';
+    group.id = `${categoryId}-${athlete}-uniform`;
+    group.hidden = false;
+    const title = document.createElement('p'); title.className = 'uniform-title'; title.textContent = categoryId === 'feminino' ? `Uniforme da atleta ${athlete === 'one' ? '1' : '2'}` : categoryId === 'kids' && athlete === 'one' ? 'Uniforme do atleta infantil' : 'Uniforme deste atleta';
     group.append(title);
     const fields = {};
     for (const [key, labelText, options] of [
@@ -78,24 +111,25 @@
       ['model', 'Modelo da blusa *', rules.models],
       ['shirt', 'Tamanho da blusa *', rules.sizes.map(size => [size, size])]
     ]) {
-      const label = document.createElement('label'); label.textContent = labelText;
+      const label = document.createElement('label'); label.textContent = labelText.replace(/\s*\*$/, '');
       const select = document.createElement('select'); select.id = `${categoryId}-${athlete}-${key}`; select.name = select.id; select.required = !(key === 'model' && fixedModel);
       const empty = document.createElement('option'); empty.value = ''; empty.textContent = 'Selecione'; select.append(empty);
       for (const [value, text] of options) { const option = document.createElement('option'); option.value = value; option.textContent = text; select.append(option); }
       select.value = state[key];
       select.addEventListener('change', () => { state[key] = select.value; clearError(); });
+      addRequiredIndicator(label, select);
       label.append(select); if (key === 'model' && fixedModel) label.hidden = true; group.append(label); fields[key] = select;
     }
     return {group, fields, setPending(pending) {
       group.hidden = pending;
-      Object.entries(fields).forEach(([key, field]) => { field.disabled = pending; field.required = !pending && !(key === 'model' && fixedModel); field.removeAttribute('aria-invalid'); });
+      Object.entries(fields).forEach(([key, field]) => { field.disabled = pending; field.required = !pending && !(key === 'model' && fixedModel); field.setAttribute('aria-required', String(field.required)); field.removeAttribute('aria-invalid'); });
     }};
   }
   function addTeam(category) {
     const state = drafts.get(category.id) || {one:'', two:'', pending:false, uniformOne:{short:'', model:'', shirt:''}, uniformTwo:{short:'', model:'', shirt:''}};
     drafts.set(category.id, state);
     const card = document.createElement('section');
-    card.className = 'team-card'; card.id = `team-${category.id}`;
+    card.className = category.id === 'feminino' ? 'team-card female-team' : 'team-card'; card.id = `team-${category.id}`;
     card.setAttribute('aria-label', `Atletas: ${category.name}`);
     const heading = document.createElement('div'); heading.className = 'team-heading';
     const title = document.createElement('h4'); title.textContent = category.name;
@@ -120,16 +154,18 @@
     checkbox.id = `${category.id}-pending`; checkbox.checked = state.pending;
     const text = document.createElement('span'); text.textContent = 'Dupla a escolher (ainda não tenho parceiro)';
     function updatePartner() {
-      two.input.disabled = state.pending; two.input.required = !state.pending;
+      two.input.disabled = state.pending; two.input.required = !state.pending; two.input.setAttribute('aria-required', String(!state.pending));
       uniformTwo.setPending(state.pending);
       two.input.placeholder = state.pending ? 'Dupla a escolher' : 'Nome completo do atleta';
       two.input.value = state.pending ? '' : state.two;
-      two.label.firstChild.textContent = `${athleteLabel(category.id, 'two')}${state.pending ? ': dupla a escolher' : ' *'}`;
+      two.label.firstChild.textContent = `${athleteLabel(category.id, 'two')}${state.pending ? ': dupla a escolher' : ''}`;
       two.input.removeAttribute('aria-invalid');
+      refreshRequiredIndicators();
     }
     checkbox.addEventListener('change', () => { state.pending = checkbox.checked; updatePartner(); clearError(); });
     one.input.addEventListener('input', () => { state.one = one.input.value; clearError(); });
     two.input.addEventListener('input', () => { state.two = two.input.value; clearError(); });
+    uniformOne.setPending(false);
     updatePartner();
     choice.append(checkbox,text); row.append(athleteOne,athleteTwo); card.append(heading,date,row,choice);
     // Keep chosen categories in the same order as the quick selection, without rebuilding inputs.
@@ -198,5 +234,6 @@
   $('close-review').addEventListener('click', closeReview);
   $('edit-review').addEventListener('click', closeReview);
   dialog.addEventListener('click', e => { if (e.target === dialog) { const box = dialog.getBoundingClientRect(); if (e.clientX < box.left || e.clientX > box.right || e.clientY < box.top || e.clientY > box.bottom) closeReview(); } });
+  refreshRequiredIndicators();
   // No automatic sending, storage, analytics, or payment. The visitor confirms in WhatsApp.
 })();

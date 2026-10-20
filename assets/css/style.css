@@ -11,3 +11,18 @@ h3{letter-spacing:.012em}
 select{font:inherit;touch-action:manipulation;display:block;background:#fff;border:1px solid #bfcbd3;border-radius:3px;padding:11px 9px;width:100%;margin-top:6px;color:var(--ink);font-size:13px;min-height:46px;min-width:0}
 select:focus-visible{outline:3px solid #168acc;outline-offset:4px}select[aria-invalid=true]{border-color:#b82f23}.athlete-block{min-width:0}.uniform-fields{display:grid;gap:11px;margin-top:16px;padding-top:13px;border-top:1px solid #d6dcdf}.uniform-title{font-size:10px;font-weight:800;letter-spacing:.04em;color:#536471;margin-bottom:1px}
 @media(max-width:760px){.athlete-block+.athlete-block{border-top:1px solid #c9d4da;padding-top:20px;margin-top:5px}.uniform-fields{grid-template-columns:1fr 1fr;gap:12px}.uniform-title{grid-column:1/-1}.uniform-fields>label:nth-of-type(2){grid-column:1/-1;grid-row:3}.uniform-fields>label:nth-of-type(3){grid-column:2;grid-row:2}}
+
+/* V1.4: cada atleta do Feminino tem seu próprio bloco completo de uniforme. */
+.female-team>.input-grid{grid-template-columns:1fr;gap:24px}
+.female-team .athlete-block+.athlete-block{border-top:1px solid #c9d4da;padding-top:20px}
+.female-team .uniform-fields:not([hidden]){display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.female-team .uniform-title{grid-column:1/-1}
+.female-team .uniform-fields>label:nth-of-type(2){grid-column:1/-1;grid-row:3}
+.female-team .uniform-fields>label:nth-of-type(3){grid-column:2;grid-row:2}
+
+/* V1.5: CTAs direcionam à primeira etapa do formulário, inclusive no celular. */
+#registration-form{scroll-margin-top:8px}
+
+/* V2.0: indicadores acompanham a validade dos campos, sem alterar o layout. */
+.required-mark{color:#c62828;font-size:15px;font-weight:800;line-height:1;margin-left:4px;vertical-align:baseline}
+legend>.required-mark{display:inline;width:auto;height:auto;border-radius:0;background:none;padding:0;margin-right:0;color:#c62828;font-size:15px}
