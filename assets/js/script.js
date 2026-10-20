@@ -52,8 +52,47 @@
     label.append(input);
     return {label, input};
   }
+  function isMixed(categoryId) { return ['misto-iniciante','misto-aberto'].includes(categoryId); }
+  function uniformRules(categoryId, athlete) {
+    if (categoryId === 'kids' && athlete === 'one') return config.uniforms.child;
+    if (categoryId === 'feminino' || (isMixed(categoryId) && athlete === 'two')) return config.uniforms.female;
+    return config.uniforms.adult;
+  }
+  function athleteLabel(categoryId, athlete) {
+    if (categoryId === 'kids') return athlete === 'one' ? 'Atleta Kids' : 'Atleta adulto';
+    if (isMixed(categoryId)) return athlete === 'one' ? 'Atleta homem' : 'Atleta mulher';
+    if (categoryId === 'feminino') return athlete === 'one' ? 'Atleta 1' : 'Atleta 2';
+    return athlete === 'one' ? 'Atleta 1' : 'Atleta 2';
+  }
+  function makeUniform(categoryId, athlete, state) {
+    const rules = uniformRules(categoryId, athlete);
+    const fixedModel = rules.models.length === 1;
+    if (fixedModel) state.model = rules.models[0][0];
+    const group = document.createElement('div');
+    group.className = 'uniform-fields';
+    const title = document.createElement('p'); title.className = 'uniform-title'; title.textContent = categoryId === 'kids' && athlete === 'one' ? 'Uniforme do atleta infantil' : 'Uniforme deste atleta';
+    group.append(title);
+    const fields = {};
+    for (const [key, labelText, options] of [
+      ['short', 'Short *', rules.sizes.map(size => [size, size])],
+      ['model', 'Modelo da blusa *', rules.models],
+      ['shirt', 'Tamanho da blusa *', rules.sizes.map(size => [size, size])]
+    ]) {
+      const label = document.createElement('label'); label.textContent = labelText;
+      const select = document.createElement('select'); select.id = `${categoryId}-${athlete}-${key}`; select.name = select.id; select.required = !(key === 'model' && fixedModel);
+      const empty = document.createElement('option'); empty.value = ''; empty.textContent = 'Selecione'; select.append(empty);
+      for (const [value, text] of options) { const option = document.createElement('option'); option.value = value; option.textContent = text; select.append(option); }
+      select.value = state[key];
+      select.addEventListener('change', () => { state[key] = select.value; clearError(); });
+      label.append(select); if (key === 'model' && fixedModel) label.hidden = true; group.append(label); fields[key] = select;
+    }
+    return {group, fields, setPending(pending) {
+      group.hidden = pending;
+      Object.entries(fields).forEach(([key, field]) => { field.disabled = pending; field.required = !pending && !(key === 'model' && fixedModel); field.removeAttribute('aria-invalid'); });
+    }};
+  }
   function addTeam(category) {
-    const state = drafts.get(category.id) || {one:'', two:'', pending:false};
+    const state = drafts.get(category.id) || {one:'', two:'', pending:false, uniformOne:{short:'', model:'', shirt:''}, uniformTwo:{short:'', model:'', shirt:''}};
     drafts.set(category.id, state);
     const card = document.createElement('section');
     card.className = 'team-card'; card.id = `team-${category.id}`;
@@ -68,26 +107,31 @@
       option.checked = false; toggleCategory(category, false); option.focus();
     });
     heading.append(title,remove);
-    const date = document.createElement('p'); date.className = 'field-help'; date.textContent = category.schedule + (category.id === 'kids' ? ' • Um atleta Kids e um adulto' : '');
+    const date = document.createElement('p'); date.className = 'field-help'; date.textContent = category.schedule + (category.id === 'kids' ? ' • Um atleta Kids e um adulto' : isMixed(category.id) ? ' • Um homem e uma mulher' : '');
     const row = document.createElement('div'); row.className = 'input-grid';
-    const one = makeInput(`${category.id}-one`, category.id === 'kids' ? 'Atleta Kids *' : 'Atleta 1 *', state.one, true);
-    const two = makeInput(`${category.id}-two`, category.id === 'kids' ? 'Atleta adulto *' : 'Atleta 2 *', state.two, !state.pending);
+    const one = makeInput(`${category.id}-one`, `${athleteLabel(category.id, 'one')} *`, state.one, true);
+    const two = makeInput(`${category.id}-two`, `${athleteLabel(category.id, 'two')} *`, state.two, !state.pending);
+    const uniformOne = makeUniform(category.id, 'one', state.uniformOne);
+    const uniformTwo = makeUniform(category.id, 'two', state.uniformTwo);
+    const athleteOne = document.createElement('div'); athleteOne.className = 'athlete-block'; athleteOne.append(one.label, uniformOne.group);
+    const athleteTwo = document.createElement('div'); athleteTwo.className = 'athlete-block'; athleteTwo.append(two.label, uniformTwo.group);
     const choice = document.createElement('label'); choice.className = 'partner-choice';
     const checkbox = document.createElement('input'); checkbox.type = 'checkbox';
     checkbox.id = `${category.id}-pending`; checkbox.checked = state.pending;
     const text = document.createElement('span'); text.textContent = 'Dupla a escolher (ainda não tenho parceiro)';
     function updatePartner() {
       two.input.disabled = state.pending; two.input.required = !state.pending;
+      uniformTwo.setPending(state.pending);
       two.input.placeholder = state.pending ? 'Dupla a escolher' : 'Nome completo do atleta';
       two.input.value = state.pending ? '' : state.two;
-      two.label.firstChild.textContent = state.pending ? (category.id === 'kids' ? 'Atleta adulto: dupla a escolher' : 'Atleta 2: dupla a escolher') : (category.id === 'kids' ? 'Atleta adulto *' : 'Atleta 2 *');
+      two.label.firstChild.textContent = `${athleteLabel(category.id, 'two')}${state.pending ? ': dupla a escolher' : ' *'}`;
       two.input.removeAttribute('aria-invalid');
     }
     checkbox.addEventListener('change', () => { state.pending = checkbox.checked; updatePartner(); clearError(); });
     one.input.addEventListener('input', () => { state.one = one.input.value; clearError(); });
     two.input.addEventListener('input', () => { state.two = two.input.value; clearError(); });
     updatePartner();
-    choice.append(checkbox,text); row.append(one.label,two.label); card.append(heading,date,row,choice);
+    choice.append(checkbox,text); row.append(athleteOne,athleteTwo); card.append(heading,date,row,choice);
     // Keep chosen categories in the same order as the quick selection, without rebuilding inputs.
     const following = config.categories.slice(config.categories.indexOf(category) + 1).find(c => selection.has(c.id));
     $('teams').insertBefore(card, following ? $(`team-${following.id}`) : null);
@@ -115,6 +159,13 @@
       if (clean(state.one).length < 2) { showError(`Informe o nome do Atleta 1 em ${category.name}.`, $(`${category.id}-one`)); return false; }
       if (!state.pending && clean(state.two).length < 2) { showError(`Informe o Atleta 2 em ${category.name} ou marque “Dupla a escolher”.`, $(`${category.id}-two`)); return false; }
       if (!state.pending && clean(state.one).toLocaleLowerCase('pt-BR') === clean(state.two).toLocaleLowerCase('pt-BR')) { showError(`Os dois atletas de ${category.name} precisam ser pessoas diferentes.`, $(`${category.id}-two`)); return false; }
+      for (const [athlete, name, uniform] of [['one', state.one, state.uniformOne], ...(state.pending ? [] : [['two', state.two, state.uniformTwo]])]) {
+        for (const [key, description] of [['short', 'o tamanho do short'], ['model', 'o modelo da blusa'], ['shirt', 'o tamanho da blusa']]) {
+          const rules = uniformRules(category.id, athlete);
+          const valid = key === 'model' ? rules.models.some(([value]) => value === uniform[key]) : rules.sizes.includes(uniform[key]);
+          if (!valid) { showError(`Selecione ${description} de ${clean(name)} em ${category.name}.`, $(`${category.id}-${athlete}-${key}`)); return false; }
+        }
+      }
     }
     if (clean($('responsible').value).length < 2) { showError('Informe o nome do responsável pela inscrição.', $('responsible')); return false; }
     const digits = $('phone').value.replace(/\D/g,'');
@@ -126,6 +177,9 @@
     for (const category of selectedCategories()) {
       const state = drafts.get(category.id);
       lines.push('', `*Categoria:* ${category.name}`, `*Programação:* ${category.schedule}`, `${clean(state.one)}/${state.pending ? 'Dupla' : clean(state.two)}`);
+      const uniformLine = (name, uniform) => `${clean(name)}: Short ${uniform.short} | Blusa ${uniform.shirt}${uniform.model === 'baby-look' ? 'BLK' : ''}`;
+      lines.push(uniformLine(state.one, state.uniformOne));
+      lines.push(state.pending ? 'Dupla: uniforme a definir' : uniformLine(state.two, state.uniformTwo));
     }
     lines.push('', 'Gostaria de confirmar a disponibilidade e receber as orientações de pagamento.');
     if ($('notes').value.trim()) lines.push('', `*Observações:* ${$('notes').value.trim()}`);

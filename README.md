@@ -1,4 +1,4 @@
-# 5º Open do Jacombina • Versão 1.1
+# 5º Open do Jacombina • Versão 1.3
 
 Site estático em HTML, CSS e JavaScript puro. Sem dependências, GA4, Pixel ou outro rastreador. Sem publicação automática.
 
@@ -26,6 +26,18 @@ Cloudflare Pages por GitHub: envie o conteúdo da pasta a um repositório, selec
 ## Atenção ao contato de inscrição
 
 O contato foi preservado exatamente como recebido: **74 9964-0640**. Ele contém oito dígitos após o DDD. O destino do botão é `557499640640`, sem acrescentar dígitos por suposição. Confirme com a organização o número WhatsApp correto antes de colocar o site em produção. Se houver um nono dígito, atualize `whatsapp` e `contactDisplay` em `assets/js/config.js`, além do texto de contato em `index.html` (rodapé e fallback sem JavaScript). O link foi gerado e sua mensagem verificada, mas a existência da conta WhatsApp não foi confirmada e nenhuma mensagem real foi enviada.
+
+## Uniformes por atleta
+
+Cada atleta tem short e blusa independentes. As regras ficam em `uniforms` no config.js:
+
+- Adultos: P, M, G e GG, modelo tradicional.
+- Misto Iniciante e Misto Aberto: primeiro campo identifica o homem (tradicional); segundo identifica a mulher (tradicional ou Baby Look).
+- Feminino C + D: as duas atletas podem escolher tradicional ou Baby Look.
+- Kids: primeiro atleta é infantil, com short e blusa de 10 anos, 12 anos, 14 anos, P adulto, M adulto ou G adulto. O segundo atleta é adulto, com P, M, G ou GG. Sem Baby Look no Kids.
+- Demais categorias: sem Baby Look.
+
+O modelo tradicional é automático quando é a única opção. A mensagem mantém João/Bia ou João/Dupla e acrescenta uniforme por nome: `Bia: Short P | Blusa MBLK`. Para o infantil, mantém o tamanho explícito: `Short 12 anos | Blusa P adulto`. Sem parceiro definido, o uniforme dele fica a definir. As escolhas são preservadas ao alternar Dupla a escolher e ao remover e selecionar novamente a categoria durante a sessão.
 
 ## Inscrição e valor
 
